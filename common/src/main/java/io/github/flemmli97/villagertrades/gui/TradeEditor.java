@@ -3,6 +3,9 @@ package io.github.flemmli97.villagertrades.gui;
 import io.github.flemmli97.villagertrades.config.ConfigHandler;
 import io.github.flemmli97.villagertrades.gui.inv.SeparateInv;
 import io.github.flemmli97.villagertrades.helper.MerchantOfferMixinInterface;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.IntPredicate;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
@@ -32,18 +35,16 @@ import net.minecraft.world.item.trading.ItemCost;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.function.IntPredicate;
-
 public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Data> {
 
     public static int OFFERS_PER_PAGE = 8;
-    private static final IntPredicate IS_TRADE_SLOT = index -> {
+    private static final IntPredicate IS_TRADE_SLOT = index ->
+    {
         int mod = index % 9;
         return index <= 54 && index > 17 && mod != 2 && mod != 4 && mod != 7;
     };
-    private static final IntPredicate IS_EDIT_SLOT = index -> {
+    private static final IntPredicate IS_EDIT_SLOT = index ->
+    {
         int mod = index % 9;
         return index > 17 && index < 54 && (mod == 2 || mod == 7);
     };
@@ -51,50 +52,59 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
     private int page, maxPages;
     private final AbstractVillager villager;
 
-    protected TradeEditor(int syncId, Inventory playerInventory, Data data) {
+    protected TradeEditor(int syncId, Inventory playerInventory, Data data)
+    {
         super(syncId, playerInventory, 6, true, IS_TRADE_SLOT, data);
         this.villager = data.villager;
     }
 
-    public static void openGui(ServerPlayer player, AbstractVillager villager) {
+    public static void openGui(ServerPlayer player, AbstractVillager villager)
+    {
         MenuProvider fac = new MenuProvider() {
             @Override
-            public AbstractContainerMenu createMenu(int syncId, Inventory inv, Player player) {
+            public AbstractContainerMenu createMenu(int syncId, Inventory inv, Player player)
+            {
                 return new TradeEditor(syncId, inv, new Data(villager));
             }
 
             @Override
-            public Component getDisplayName() {
+            public Component getDisplayName()
+            {
                 return villager.getDisplayName();
             }
         };
         player.openMenu(fac);
     }
 
-    public static ItemStack emptyFiller() {
+    public static ItemStack emptyFiller()
+    {
         ItemStack stack = new ItemStack(Items.GRAY_STAINED_GLASS_PANE);
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(""));
         return stack;
     }
 
-    public static ItemStack tradingFiller() {
+    public static ItemStack tradingFiller()
+    {
         ItemStack stack = new ItemStack(Items.LIME_STAINED_GLASS_PANE);
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(""));
         return stack;
     }
 
-    public static void playSongToPlayer(ServerPlayer player, SoundEvent event, float vol, float pitch) {
+    public static void playSongToPlayer(ServerPlayer player, SoundEvent event, float vol, float pitch)
+    {
         player.connection.send(
-                new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(event), SoundSource.PLAYERS, player.position().x, player.position().y, player.position().z, vol, pitch, player.level().getRandom().nextLong()));
+            new ClientboundSoundPacket(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(event), SoundSource.PLAYERS, player.position().x, player.position().y, player.position().z, vol, pitch, player.level().getRandom().nextLong()));
     }
 
-    public static void playSongToPlayer(ServerPlayer player, Holder<SoundEvent> event, float vol, float pitch) {
+    public static void playSongToPlayer(ServerPlayer player, Holder<SoundEvent> event, float vol, float pitch)
+    {
         player.connection.send(
-                new ClientboundSoundPacket(event, SoundSource.PLAYERS, player.position().x, player.position().y, player.position().z, vol, pitch, player.level().getRandom().nextLong()));
+            new ClientboundSoundPacket(event, SoundSource.PLAYERS, player.position().x, player.position().y, player.position().z, vol, pitch, player.level().getRandom().nextLong()));
     }
 
     @Override
-    protected void fillInventoryWith(Player player, SeparateInv inv, Data data) {
+    protected void fillInventoryWith(Player player, SeparateInv inv, Data data)
+    {
         if (!(player instanceof ServerPlayer serverPlayer))
             return;
         MerchantOffers offers = data.villager.getOffers();
@@ -143,31 +153,18 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
         }
     }
 
-    private static ItemStack offerEditStack(MerchantOffer offer, RegistryAccess registryAccess) {
+    private static ItemStack offerEditStack(MerchantOffer offer, RegistryAccess registryAccess)
+    {
         ItemStack stack = new ItemStack(Items.LIME_STAINED_GLASS_PANE);
-        stack.set(DataComponents.CUSTOM_NAME, Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit"))
-                .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.AQUA)));
-        stack.set(DataComponents.LORE, new ItemLore(List.of(
-                ((MerchantOfferMixinInterface) offer).isInfinite() ?
-                        Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.infinite"))
-                                .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY))
-                        :
-                        Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.uses"), offer.getUses(), offer.getMaxUses())
-                                .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)),
-                Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.xp"), offer.shouldRewardExp(), offer.getXp())
-                        .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)),
-                Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.demand"), offer.getDemand())
-                        .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)),
-                Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.price"), offer.getPriceMultiplier(), offer.getSpecialPriceDiff())
-                        .setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY))
-        )));
-        stack.enchant(registryAccess.registryOrThrow(Registries.ENCHANTMENT).getHolderOrThrow(Enchantments.UNBREAKING), 1);
-        stack.set(DataComponents.ENCHANTMENTS, stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY)
-                .withTooltip(false));
+        stack.set(DataComponents.CUSTOM_NAME, Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit")).setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.AQUA)));
+        stack.set(DataComponents.LORE, new ItemLore(List.of(((MerchantOfferMixinInterface)offer).isInfinite() ? Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.infinite")).setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)) : Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.uses"), offer.getUses(), offer.getMaxUses()).setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)), Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.xp"), offer.shouldRewardExp(), offer.getXp()).setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)), Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.demand"), offer.getDemand()).setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)), Component.translatable(ConfigHandler.LANG.get("villagertrades.gui.trade.edit.price"), offer.getPriceMultiplier(), offer.getSpecialPriceDiff()).setStyle(Style.EMPTY.withItalic(false).applyFormat(ChatFormatting.GRAY)))));
+        stack.enchant(registryAccess.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.UNBREAKING), 1);
+        stack.set(DataComponents.ENCHANTMENTS, stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY).withTooltip(false));
         return stack;
     }
 
-    private void flipPage() {
+    private void flipPage()
+    {
         MerchantOffers offers = this.villager.getOffers();
         this.maxPages = offers.size() / OFFERS_PER_PAGE;
         for (int i = 0; i < 54; i++) {
@@ -218,7 +215,8 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
         this.broadcastChanges();
     }
 
-    public int getOfferIndex(int index) {
+    public int getOfferIndex(int index)
+    {
         if (index < 18)
             return -1;
         index -= 18;
@@ -229,7 +227,8 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
         return idx;
     }
 
-    public MerchantOffer getOfferFromSlot(int index) {
+    public MerchantOffer getOfferFromSlot(int index)
+    {
         int offerIndex = this.getOfferIndex(index);
         if (offerIndex == -1)
             return null;
@@ -239,7 +238,8 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
         return offers.get(offers.size() - 1);
     }
 
-    public void updateOfferFor(int index) {
+    public void updateOfferFor(int index)
+    {
         if (index < 18)
             return;
         int idx = index - 18;
@@ -283,7 +283,8 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
     }
 
     @Override
-    protected boolean handleSlotClicked(ServerPlayer player, int index, Slot slot, int clickType) {
+    protected boolean handleSlotClicked(ServerPlayer player, int index, Slot slot, int clickType)
+    {
         if (index == 0) {
             player.closeContainer();
             TradeEditor.playSongToPlayer(player, SoundEvents.UI_BUTTON_CLICK, 1, 1f);
@@ -315,11 +316,13 @@ public class TradeEditor extends EditableServerOnlyScreenHandler<TradeEditor.Dat
     }
 
     @Override
-    protected boolean isRightSlot(int slot) {
+    protected boolean isRightSlot(int slot)
+    {
         return slot == 0 || (this.page > 0 && slot == 1) || (this.page < this.maxPages && slot == 8) || IS_TRADE_SLOT.test(slot)
-                || IS_EDIT_SLOT.test(slot);
+            || IS_EDIT_SLOT.test(slot);
     }
 
-    record Data(AbstractVillager villager) {
+    record Data(AbstractVillager villager)
+    {
     }
 }
